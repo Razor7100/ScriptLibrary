@@ -2,7 +2,7 @@
 // @name         Replace Roblox's Corporate Words
 // @namespace    http://tampermonkey.net/
 // @version      0.0.1
-// @description  Self Eplanatory
+// @description  Self Explanatory
 // @author       Razor7100
 // @match        https://www.roblox.com/*
 // @grant        none
