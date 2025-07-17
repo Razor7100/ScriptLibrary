@@ -62,21 +62,35 @@
         }
     }
 
+    let scheduled = false;
+    let nodesToProcess = new Set();
+
+    function scheduleProcessing() {
+        if (scheduled) return;
+        scheduled = true;
+        setTimeout(() => {
+            nodesToProcess.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    processTextNode(node);
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    replaceTextContent(node);
+                }
+            });
+            nodesToProcess.clear();
+            scheduled = false;
+        }, 50); // Adjust delay as needed
+    }
+
     function observeMutations() {
         const observer = new MutationObserver(mutations => {
             for (const mutation of mutations) {
                 if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            replaceTextContent(node);
-                        } else if (node.nodeType === Node.TEXT_NODE) {
-                            processTextNode(node);
-                        }
-                    });
+                    mutation.addedNodes.forEach(node => nodesToProcess.add(node));
                 } else if (mutation.type === 'characterData') {
-                    processTextNode(mutation.target);
+                    nodesToProcess.add(mutation.target);
                 }
             }
+            scheduleProcessing();
         });
 
         observer.observe(document.body, {
