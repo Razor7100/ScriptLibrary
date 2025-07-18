@@ -4,4 +4,4 @@ A collection of various CSS scripts designed for public use on websites, browser
 
 ### Available Scripts
 
-- [Userscripts/Replace Roblox's Corporate Words.js](Userscripts/Replace%20Roblox's%20Corporate%20Words.js)
+- [Replace Roblox's Corporate Words.js](https://raw.githubusercontent.com/Razor7100/ScriptLibrary/refs/heads/main/Userscripts/replace_roblox_corporate_words.user.js)
