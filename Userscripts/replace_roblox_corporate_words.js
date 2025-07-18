@@ -6,8 +6,8 @@
 // @author       Razor7100
 // @match        https://www.roblox.com/*
 // @grant        none
-// @downloadURL  https://raw.githubusercontent.com/Razor7100/ScriptLibrary/main/Userscripts/Replace%20Roblox's%20Corporate%20Words.js
-// @updateURL    https://raw.githubusercontent.com/Razor7100/ScriptLibrary/main/Userscripts/Replace%20Roblox's%20Corporate%20Words.js
+// @downloadURL  https://raw.githubusercontent.com/Razor7100/ScriptLibrary/main/Userscripts/replace_roblox_corporate_words.user.js
+// @updateURL    https://raw.githubusercontent.com/Razor7100/ScriptLibrary/main/Userscripts/replace_roblox_corporate_words.user.js
 // ==/UserScript==
 (function () {
     'use strict';
