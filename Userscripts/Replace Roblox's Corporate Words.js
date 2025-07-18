@@ -7,11 +7,10 @@
 // @match        https://www.roblox.com/*
 // @grant        none
 // ==/UserScript==
-
 (function () {
     'use strict';
 
-    const replacements = {
+    const globalReplacements = {
         connection: 'friend',
         connections: 'friends',
         charts: 'discover',
@@ -21,6 +20,16 @@
         experiences: 'games',
         experience: 'game'
     };
+
+    const communityPageReplacements = {
+        followers: 'members'
+    };
+
+    const isCommunityPage = location.href.startsWith('https://www.roblox.com/communities/');
+
+    const replacements = isCommunityPage
+        ? { ...globalReplacements, ...communityPageReplacements }
+        : globalReplacements;
 
     function preserveCase(original, replacement) {
         if (original === original.toUpperCase()) {
@@ -42,6 +51,30 @@
         });
     }
 
+    function processAttributeText(value) {
+        return value.replace(/\b\w+\b/g, match => {
+            const lower = match.toLowerCase();
+            if (replacements.hasOwnProperty(lower)) {
+                return preserveCase(match, replacements[lower]);
+            }
+            return match;
+        });
+    }
+
+    function replaceAttributes(node) {
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        const attributesToCheck = ['alt', 'placeholder'];
+        for (const attr of attributesToCheck) {
+            if (node.hasAttribute(attr)) {
+                const original = node.getAttribute(attr);
+                const updated = processAttributeText(original);
+                if (original !== updated) {
+                    node.setAttribute(attr, updated);
+                }
+            }
+        }
+    }
+
     function replaceTextContent(node) {
         const treeWalker = document.createTreeWalker(
             node,
@@ -60,6 +93,11 @@
         while (treeWalker.nextNode()) {
             processTextNode(treeWalker.currentNode);
         }
+
+        const allElements = node.querySelectorAll('*');
+        for (const el of allElements) {
+            replaceAttributes(el);
+        }
     }
 
     let scheduled = false;
@@ -72,13 +110,14 @@
             nodesToProcess.forEach(node => {
                 if (node.nodeType === Node.TEXT_NODE) {
                     processTextNode(node);
+                    if (node.parentNode) replaceAttributes(node.parentNode);
                 } else if (node.nodeType === Node.ELEMENT_NODE) {
                     replaceTextContent(node);
                 }
             });
             nodesToProcess.clear();
             scheduled = false;
-        }, 50); // Adjust delay as needed
+        }, 50);
     }
 
     function observeMutations() {
@@ -88,6 +127,8 @@
                     mutation.addedNodes.forEach(node => nodesToProcess.add(node));
                 } else if (mutation.type === 'characterData') {
                     nodesToProcess.add(mutation.target);
+                } else if (mutation.type === 'attributes') {
+                    nodesToProcess.add(mutation.target);
                 }
             }
             scheduleProcessing();
@@ -96,7 +137,9 @@
         observer.observe(document.body, {
             childList: true,
             subtree: true,
-            characterData: true
+            characterData: true,
+            attributes: true,
+            attributeFilter: ['alt', 'placeholder']
         });
     }
 
