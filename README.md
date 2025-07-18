@@ -1,6 +1,4 @@
-## ScriptLibrary
-
-A collection of various CSS scripts designed for public use on websites, browser extensions, and related applications.
+## Razor's Script Library
 
 ### Available Scripts
 
