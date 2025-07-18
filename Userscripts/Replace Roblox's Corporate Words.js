@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         Replace Roblox's Corporate Words
 // @namespace    http://tampermonkey.net/
-// @version      0.2.2
+// @version      0.2.3
 // @description  Self Explanatory
 // @author       Razor7100
 // @match        https://www.roblox.com/*
 // @grant        none
-// @downloadURL  https://raw.githubusercontent.com/Razor7100/ScriptLibrary/refs/heads/main/Userscripts/Replace%20Roblox's%20Corporate%20Words.js
-// @updateURL    https://raw.githubusercontent.com/Razor7100/ScriptLibrary/refs/heads/main/Userscripts/Replace%20Roblox's%20Corporate%20Words.js
+// @downloadURL  https://raw.githubusercontent.com/Razor7100/ScriptLibrary/main/Userscripts/Replace%20Roblox's%20Corporate%20Words.js
+// @updateURL    https://raw.githubusercontent.com/Razor7100/ScriptLibrary/main/Userscripts/Replace%20Roblox's%20Corporate%20Words.js
 // ==/UserScript==
 (function () {
     'use strict';
