@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Replace Roblox's Corporate Words
 // @namespace    http://tampermonkey.net/
-// @version      0.2.3
+// @version      0.2.4
 // @description  Self Explanatory
 // @author       Razor7100
 // @match        https://www.roblox.com/*
@@ -9,58 +9,69 @@
 // @downloadURL  https://raw.githubusercontent.com/Razor7100/ScriptLibrary/main/Userscripts/replace_roblox_corporate_words.user.js
 // @updateURL    https://raw.githubusercontent.com/Razor7100/ScriptLibrary/main/Userscripts/replace_roblox_corporate_words.user.js
 // ==/UserScript==
+
 (function () {
     'use strict';
 
     const globalReplacements = {
-        connection: 'friend',
-        connections: 'friends',
-        charts: 'discover',
-        marketplace: 'catalog',
-        communities: 'groups',
-        community: 'group',
-        experiences: 'games',
-        experience: 'game'
+        'connection': 'friend',
+        'connections': 'friends',
+        'charts': 'discover',
+        'marketplace': 'catalog',
+        'communities': 'groups',
+        'community': 'group',
+        'experiences': 'games',
+        'experience': 'game'
     };
 
-    const communityPageReplacements = {
-        followers: 'members'
+    const avatarEditorPageReplacements = {
+        'recently acquired': 'recently purchased',
+        'recently worn': 'all'
     };
 
-    const isCommunityPage = location.href.startsWith('https://www.roblox.com/communities/');
+    const groupPageReplacements = {
+        'followers': 'members'
+    };
 
-    const replacements = isCommunityPage
-        ? { ...globalReplacements, ...communityPageReplacements }
-        : globalReplacements;
+    const isGroupPage = location.href.startsWith('https://www.roblox.com/communities/');
+    const isAvatarEditorPage = location.href.startsWith('https://www.roblox.com/my/avatar');
+
+    let replacements = { ...globalReplacements };
+
+    if (isGroupPage) {
+        replacements = { ...replacements, ...groupPageReplacements };
+    }
+
+    if (isAvatarEditorPage) {
+        replacements = { ...replacements, ...avatarEditorPageReplacements };
+    }
 
     function preserveCase(original, replacement) {
-        if (original === original.toUpperCase()) {
-            return replacement.toUpperCase();
-        } else if (original[0] === original[0].toUpperCase()) {
-            return replacement[0].toUpperCase() + replacement.slice(1);
-        } else {
-            return replacement;
+        const originalWords = original.split(/\s+/);
+        const replacementWords = replacement.split(/\s+/);
+        return replacementWords.map((word, i) => {
+            if (!originalWords[i]) return word;
+            const orig = originalWords[i];
+            if (orig === orig.toUpperCase()) return word.toUpperCase();
+            if (orig[0] === orig[0].toUpperCase()) return word[0].toUpperCase() + word.slice(1);
+            return word;
+        }).join(' ');
+    }
+
+    function processText(text) {
+        for (const [key, value] of Object.entries(replacements)) {
+            const pattern = new RegExp(`\\b${key.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&')}\\b`, 'gi');
+            text = text.replace(pattern, match => preserveCase(match, value));
         }
+        return text;
     }
 
     function processTextNode(textNode) {
-        textNode.textContent = textNode.textContent.replace(/\b\w+\b/g, match => {
-            const lower = match.toLowerCase();
-            if (replacements.hasOwnProperty(lower)) {
-                return preserveCase(match, replacements[lower]);
-            }
-            return match;
-        });
+        textNode.textContent = processText(textNode.textContent);
     }
 
     function processAttributeText(value) {
-        return value.replace(/\b\w+\b/g, match => {
-            const lower = match.toLowerCase();
-            if (replacements.hasOwnProperty(lower)) {
-                return preserveCase(match, replacements[lower]);
-            }
-            return match;
-        });
+        return processText(value);
     }
 
     function replaceAttributes(node) {
