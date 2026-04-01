@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Replace Roblox's Corporate Words
 // @namespace    http://tampermonkey.net/
-// @version      0.2.7
+// @version      0.2.8
 // @description  Replaces certain corporate terms on Roblox with more user-friendly alternatives.
 // @author       Razor7100
 // @match        https://www.roblox.com/*
@@ -14,123 +14,87 @@
     'use strict';
 
     const baseReplacements = {
-        connection: 'friend',
-        connections: 'friends',
         charts: 'discover',
         marketplace: 'catalog',
         communities: 'groups',
         community: 'group',
         experiences: 'games',
-        experience: 'game',
-        connect: 'Friends',
-        connected: 'Added'
+        experience: 'game'
     };
 
-    const avatarEditorReplacements = {
-        'recently acquired': 'recently purchased',
-        'recently worn': 'all'
+    const pageReplacements = {
+        'https://www.roblox.com/communities/': {
+            followers: 'members'
+        },
+        'https://www.roblox.com/my/avatar': {
+            'recently acquired': 'recently purchased',
+            'recently worn': 'all'
+        }
     };
 
-    const groupPageReplacements = {
-        'followers': 'members'
+    const excludedClasses = [
+        'dialog-message-body',
+        'group-shout-content',
+        'profile-about',
+    ];
+
+    const excludedIdClass = [
+        ['chat-friends', 'chat-friends'],
+    ];
+
+    const excludedTagClass = [
+        ['li', 'comment', 'list-item', 'ng-scope'],
+    ];
+
+    const replacements = { ...baseReplacements,
+        ...(Object.entries(pageReplacements).find(([k]) => location.href.startsWith(k))?.[1] ?? {})
     };
 
-    const isGroupPage = () => location.href.startsWith('https://www.roblox.com/communities/');
-    const isAvatarEditorPage = () => location.href.startsWith('https://www.roblox.com/my/avatar');
+    const processText = text => Object.entries(replacements).reduce((t, [k, v]) =>
+        t.replace(new RegExp(`\\b${k}\\b`, 'gi'), m => preserveCase(m, v)), text);
 
-    let replacements = { ...baseReplacements };
-    if (isGroupPage()) {
-        Object.assign(replacements, groupPageReplacements);
-    } else if (isAvatarEditorPage()) {
-        Object.assign(replacements, avatarEditorReplacements);
-    }
+    const preserveCase = (orig, repl) =>
+        orig === orig.toUpperCase() ? repl.toUpperCase() :
+        orig[0] === orig[0].toUpperCase() ? repl[0].toUpperCase() + repl.slice(1) : repl;
 
-    function processText(text) {
-        for (const [key, value] of Object.entries(replacements)) {
-            const regex = new RegExp(`\\b${key}\\b`, 'gi');
-            text = text.replace(regex, match => preserveCase(match, value));
-        }
-        return text;
-    }
-
-    function preserveCase(original, replacement) {
-        if (original === original.toUpperCase()) return replacement.toUpperCase();
-        if (original[0] === original[0].toUpperCase()) return replacement[0].toUpperCase() + replacement.slice(1);
-        return replacement;
-    }
-
-    function replaceTextNode(textNode) {
-        if (
-            textNode.nodeType === Node.TEXT_NODE &&
-            !isExcludedContainer(textNode.parentNode)
-        ) {
-            const newText = processText(textNode.textContent);
-            if (textNode.textContent !== newText) {
-                textNode.textContent = newText;
-            }
-        }
-    }
-
-    function replaceAttributes(node) {
-        const attributesToCheck = ['alt', 'placeholder', 'title'];
-        for (const attr of attributesToCheck) {
-            if (node.hasAttribute(attr)) {
-                const original = node.getAttribute(attr);
-                const updated = processText(original);
-                if (original !== updated) {
-                    node.setAttribute(attr, updated);
-                }
-            }
-        }
-    }
-
-    function isExcludedContainer(node) {
-        while (node && node.nodeType === Node.ELEMENT_NODE) {
-            if (
-                node.classList.contains('dialog-message-body') ||
-                (node.id === 'chat-friends' && node.classList.contains('chat-friends')) ||
-                node.classList.contains('group-shout-content') ||
-                node.classList.contains('profile-about') || // excluded here
-                (node.classList.contains('comment') &&
-                 node.classList.contains('list-item') &&
-                 node.classList.contains('ng-scope'))
-            ) {
-                return true;
-            }
+    function isExcluded(node) {
+        while (node?.nodeType === Node.ELEMENT_NODE) {
+            if (excludedClasses.some(c => node.classList.contains(c))) return true;
+            if (excludedIdClass.some(([id, cls]) => node.id === id && node.classList.contains(cls))) return true;
+            if (excludedTagClass.some(([tag, ...cls]) =>
+                node.tagName.toLowerCase() === tag && cls.every(c => node.classList.contains(c)))) return true;
             node = node.parentElement;
         }
         return false;
     }
 
     function walkDOM(node) {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            replaceAttributes(node);
-        }
-
         if (node.nodeType === Node.TEXT_NODE) {
-            replaceTextNode(node);
-        } else if (
-            node.nodeType === Node.ELEMENT_NODE &&
-            !isExcludedContainer(node)
-        ) {
-            node.childNodes.forEach(child => walkDOM(child));
+            if (!isExcluded(node.parentNode)) {
+                const updated = processText(node.textContent);
+                if (updated !== node.textContent) node.textContent = updated;
+            }
+        } else if (node.nodeType === Node.ELEMENT_NODE && !isExcluded(node)) {
+            for (const attr of ['alt', 'placeholder', 'title']) {
+                if (node.hasAttribute(attr)) {
+                    const updated = processText(node.getAttribute(attr));
+                    if (updated !== node.getAttribute(attr)) node.setAttribute(attr, updated);
+                }
+            }
+            node.childNodes.forEach(walkDOM);
         }
     }
 
-    const observer = new MutationObserver(mutations => {
-        mutations.forEach(mutation => {
-            mutation.addedNodes.forEach(node => walkDOM(node));
-            if (mutation.type === 'characterData') {
-                replaceTextNode(mutation.target);
-            }
-        });
-    });
-
     walkDOM(document.body);
+    new MutationObserver(ms => ms.forEach(m => {
+        m.addedNodes.forEach(walkDOM);
+        if (m.type === 'characterData') {
+            const n = m.target;
+            if (!isExcluded(n.parentNode)) {
+                const updated = processText(n.textContent);
+                if (updated !== n.textContent) n.textContent = updated;
+            }
+        }
+    })).observe(document.body, { childList: true, subtree: true, characterData: true });
 
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        characterData: true
-    });
 })();
